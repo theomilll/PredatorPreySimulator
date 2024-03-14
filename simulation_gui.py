@@ -14,14 +14,12 @@ class SimulationApp:
         self.ecosystem = ecosystem
         self.size = size
 
-        # Setting up the simulation canvas
         self.simulation_frame = ttk.Frame(master)
         self.simulation_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.canvas = tk.Canvas(self.simulation_frame, width=size, height=size)
         self.canvas.pack()
 
-        # Setting up the plotting area
         self.figure = Figure(figsize=(5, 4), dpi=100)
         self.plot = self.figure.add_subplot(1, 1, 1)
 
@@ -58,7 +56,7 @@ class SimulationApp:
         for entity in self.ecosystem.prey + self.ecosystem.predators:
             self.draw_entity(entity)
         self.ecosystem.step()
-        self.update_graph()  # Update the graph along with the ecosystem
+        self.update_graph()
         self.master.after(100, self.update)
 
 def main():
