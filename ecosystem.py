@@ -23,3 +23,6 @@ class Ecosystem:
 
         self.prey = [p for p in self.prey if p.alive]
         self.predators = [predator for predator in self.predators if predator.alive]
+
+def get_populations(self):
+    return len(self.prey), len(self.predators)
