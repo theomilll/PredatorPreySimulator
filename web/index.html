@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Predator Prey</title>
+  <meta name="description" content="A real-time predator-prey ecosystem with visible evolution, written in Rust and running in your browser via WebAssembly.">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0d0c; }
+    canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+  </style>
+</head>
+<body>
+  <canvas id="glcanvas" tabindex="1"></canvas>
+  <script src="gl.js"></script>
+  <script>load("predator-prey.wasm");</script>
+</body>
+</html>

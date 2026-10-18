@@ -1,0 +1,11 @@
+[package]
+name = "predator-prey"
+version = "0.1.0"
+description = "Real-time predator-prey ecosystem with visible evolution"
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+ecosim = { path = "../sim" }
+macroquad = "0.4.14"

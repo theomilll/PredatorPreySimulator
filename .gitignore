@@ -1,21 +1,3 @@
-# Python cache files
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
+/target
+/_site
 .DS_Store
-Thumbs.db
