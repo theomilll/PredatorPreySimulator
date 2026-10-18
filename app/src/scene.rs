@@ -72,12 +72,14 @@ impl Terrain {
         for ((px, b), k) in self
             .image
             .bytes
-            .chunks_exact_mut(4)
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
             .zip(grass.biomass())
             .zip(grass.capacity())
         {
             let c = mix(mix(SOIL, BARREN, *k), meadow, b.powf(0.8));
-            px.copy_from_slice(&[(c.r * 255.0) as u8, (c.g * 255.0) as u8, (c.b * 255.0) as u8, 255]);
+            *px = [(c.r * 255.0) as u8, (c.g * 255.0) as u8, (c.b * 255.0) as u8, 255];
         }
         self.texture.update(&self.image);
         draw_texture_ex(
