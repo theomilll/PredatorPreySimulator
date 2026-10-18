@@ -1,294 +1,125 @@
-# 🌍 Advanced Ecosystem Simulator - Predator-Prey Dynamics
+# Predator · Prey
 
-A comprehensive, realistic ecosystem simulation featuring multiple species, energy-based survival, genetic inheritance, and complex behavioral AI.
+**A living ecosystem in Rust: thousands of rabbits, deer, foxes and wolves graze, hunt, breed, starve and evolve in real time, natively or in your browser.**
 
-## 🎯 Overview
+[![CI](https://github.com/theomilll/PredatorPreySimulator/actions/workflows/ci.yml/badge.svg)](https://github.com/theomilll/PredatorPreySimulator/actions/workflows/ci.yml)
 
-This simulator models a complete food chain ecosystem with plants, herbivores, and carnivores. Each entity has realistic behaviors including:
-- Energy-based survival and reproduction
-- Genetic traits passed to offspring
-- Intelligent behavioral AI (hunting, fleeing, seeking food/mates)
-- Age and natural lifespan
-- Gender-based reproduction requiring mates
+### [▶ Run it in your browser](https://theomilll.github.io/PredatorPreySimulator/)
 
-## 🌟 Features
+![Thousands of agents grazing and hunting, with live population and evolution charts](media/demo.gif)
 
-### Multi-Species Ecosystem
-- **Plants (🌱)**: Primary producers that grow and spread naturally
-- **Rabbits (🐰)**: Small, fast herbivores with high reproduction rate
-- **Deer (🦌)**: Large herbivores with good vision and endurance
-- **Foxes (🦊)**: Agile predators that hunt rabbits
-- **Wolves (🐺)**: Apex predators that hunt both deer and rabbits
+## What you are looking at
 
-### Realistic Mechanics
+- **Grass** (green field): every cell grows, spreads to its neighbours and gets eaten. Fertile meadows and barren patches come from a seeded noise map. Winter turns it pale and slows growth.
+- **Rabbits** (cream) and **deer** (amber) are the circles. They graze, herd and run.
+- **Foxes** (orange) and **wolves** (blue) are the triangles, pointing where they move. Foxes hunt rabbits. Wolves hunt deer, and rabbits when no deer are in sight.
+- **Brightness is energy.** A starving animal fades toward the background.
+- **Rings are life events.** A small ring in the species colour is a birth. A red burst is a kill. A grey dot is starvation, a blue one old age.
+- **The panel** shows population on a log scale (grass is the shaded area), the mean of each gene per species over time, and counts of births and deaths by cause.
 
-#### Energy System
-- All animals require energy to survive
-- Energy depletes through movement and activities
-- Eating restores energy
-- Starvation leads to death
-- Energy efficiency varies by genetics
+## Features
 
-#### Genetics & Evolution
-- Four inheritable traits: speed, vision range, size, energy efficiency
-- Traits passed from parents to offspring with random mutations
-- Natural selection favors advantageous traits
+- **Thousands of agents at 60 fps.** A counting-sort spatial grid gives each animal its neighbours without an O(n²) scan. One tick costs about 0.6 ms with 1,000 animals and about 7 ms when 8,000 are packed into the map (Apple M4, single thread).
+- **Visible evolution.** Every animal carries four genes. Offspring get each gene from one parent, plus Gaussian mutation. You can watch the means drift in the chart, or switch on the **gene lens** to colour every animal by its value.
+- **Emergent ecology.** Boom-and-bust cycles, grazing fronts that sweep across meadows, predators that overshoot and crash, and prey that survive by hiding in tall grass. None of it is scripted.
+- **Deterministic.** The same seed gives the same run, tick for tick. A test checks it.
+- **Interactive.** Pause, single-step, change the speed from 0.5x to 16x, drop animals anywhere, paint new meadows, tune the world while it runs, and click any animal to inspect its genome or follow it.
+- **One codebase, two targets.** The same Rust builds a native window and a 1.1 MB WebAssembly module.
 
-#### Reproduction
-- Requires two animals of opposite gender
-- Both parents must have sufficient energy
-- Proximity-based mating (animals must be close)
-- Cooldown period after reproduction
-- Multiple offspring possible (litter size varies by species)
-- Genetic inheritance with variation
+![Zoomed in, following a hunting wolf with its genome in the inspector](media/inspect.png)
 
-#### Behavioral AI
-Each animal exhibits complex behaviors with priority-based decision making:
+## How it works
 
-**Herbivores:**
-1. Flee from nearby predators (highest priority)
-2. Seek food when hungry
-3. Seek mates when well-fed and mature
-4. Wander when no immediate needs
+Each tick runs in fixed phases, so the result never depends on iteration order:
 
-**Carnivores:**
-1. Hunt prey when hungry
-2. Seek mates when well-fed
-3. Wander when no immediate needs
+1. **Grass grows.** Each cell follows `b += r·s·(b + ½·neighbours + 0.01)·(k − b)`. Here `k` is the local fertility and `s` is the seasonal factor `1 + strength·sin(2π·t/year)`. Grazed land grows back from its edges.
+2. **Animals decide.** Each animal reads only its neighbours from the spatial grid and picks the first rule that applies:
+   - flee the nearest visible predator;
+   - if hungry, hunt the nearest preferred prey (aiming ahead of it), or graze, or walk toward the lushest grass in sight;
+   - if well fed and adult, court the nearest willing mate;
+   - otherwise wander, with herding for deer and rabbits and packing for wolves.
+3. **Animals act.** Velocities ease toward the chosen direction, animals move and pay their energy costs, and herbivores eat.
+4. **Interactions resolve.** A predator in contact rolls to kill. The odds depend on its speed and size against the prey's. A female next to a willing male gives birth to a litter.
+5. **Deaths.** Animals die of predation, starvation or old age, and the counts feed the charts.
 
-#### Vision & Perception
-- Each species has unique vision range
-- Vision affected by genetics
-- Animals detect food, predators, and mates within range
-- Hunting success depends on predator/prey speed ratio
+**Energy is conserved through reproduction.** The mother pays half her maximum energy, and that energy is split across the litter. Large litters mean weak young, and well-fed populations grow faster than starving ones.
 
-#### Age & Lifespan
-- Animals age each time step
-- Species have different natural lifespans
-- Death occurs from starvation, predation, or old age
+**Tall grass hides rabbits.** A predator only notices a rabbit standing in tall grass from very close. When rabbits are rare the grass grows tall and hides the survivors. When they are plentiful they graze it short and lose their cover.
 
-### Advanced Visualization
+**Migrants.** When a species drops below six animals, small groups occasionally walk in from the map edge. This keeps the show going after a crash. You can turn it off.
 
-#### Main Canvas
-- Dark background for better contrast
-- Different colors and shapes per species
-- Herbivores: circles, Carnivores: triangles
-- Color changes based on behavior state
-- Size varies by species and genetics
+### Genes are trade-offs
 
-#### Visual Indicators
-- **Energy Bars**: Color-coded health indicators (green → yellow → red)
-- **Gender Markers**: Blue (male) / Pink (female) dots
-- **Vision Ranges**: Optional display of detection radius
-- **Target Lines**: Show hunting/fleeing/seeking relationships
-- **Plant Maturity**: Darker green = more nutritious
+| Gene | Helps | Costs |
+|---|---|---|
+| Speed | Outrun predators or catch prey | Basal metabolism grows with speed², and moving fast costs more |
+| Vision | Spot food, mates and threats earlier | Constant energy drain |
+| Size | More energy storage, better odds in a fight | Proportionally higher metabolism |
+| Efficiency | Lower metabolism | Slower to reach maturity |
 
-### Interactive Controls
+With no predators around, rabbits slowly get slower, because speed is pure cost. When foxes boom, faster rabbits survive and the speed curve climbs.
 
-- **▶/⏸ Play/Pause**: Control simulation flow
-- **Speed Slider**: Adjust simulation speed (10-200ms per step)
-- **Add Entities**: Dynamically add plants or animals
-- **View Options**: Toggle energy bars and vision ranges
+### Species
 
-### Statistics Panel
+| | Speed | Vision | Max energy | Lifespan (ticks) | Litter | Eats |
+|---|---|---|---|---|---|---|
+| Rabbit | 1.00 | 45 | 60 | 2,400 | 1–3 | grass |
+| Deer | 1.15 | 70 | 120 | 4,800 | 1 | grass |
+| Fox | 1.20 | 60 | 90 | 3,000 | 1–2 | rabbits |
+| Wolf | 1.30 | 85 | 160 | 4,200 | 2–3 | deer, then rabbits |
 
-Real-time tracking of:
-- Population counts for all species
-- Total births and deaths
-- Average energy levels per species
-- Average age per species
-- Herbivore/carnivore ratios
+## Controls
 
-### Population Graphs
+| Input | Action |
+|---|---|
+| `Space` | Pause or resume |
+| `←` `→` | Slow down or speed up |
+| `.` | Step one tick |
+| `1`–`6` | Tools: look, rabbit, deer, fox, wolf, grass |
+| Click | Inspect an animal, or use the selected tool |
+| Drag, right-drag | Pan |
+| Wheel | Zoom |
+| `F` | Follow the selected animal |
+| `V` `I` `L` | Vision radii, intent lines, gene lens |
+| `R` `N` | Restart the same seed, or start a new one |
 
-Live updating graphs showing:
-- Population dynamics over time
-- All species on one plot
-- Color-coded with legend
-- Grid for easy reading
+## Run it
 
-## 📋 Requirements
+You need a stable Rust toolchain (1.88 or newer).
 
-### Python Packages
-```bash
-pip install tkinter matplotlib
+```sh
+cargo run --release -p predator-prey
 ```
 
-**Note**: `tkinter` usually comes pre-installed with Python. If not:
-- **Ubuntu/Debian**: `sudo apt-get install python3-tk`
-- **macOS**: Included with Python
-- **Windows**: Included with Python
+To build the web version:
 
-## 🚀 Running the Simulation
-
-### Main GUI Application
-```bash
-python simulation_gui.py
+```sh
+rustup target add wasm32-unknown-unknown
+cargo build --release -p predator-prey --target wasm32-unknown-unknown
+mkdir -p _site && cp web/* target/wasm32-unknown-unknown/release/predator-prey.wasm _site/
+python3 -m http.server -d _site 8000
 ```
 
-This launches the full interactive GUI with controls, statistics, and live graphs.
+Then open <http://localhost:8000>.
 
-### Standalone Graphing
-```bash
-python graphing.py
+To run the simulation headless and benchmark it:
+
+```sh
+cargo run --release -p ecosim --example headless -- 42 20000
 ```
 
-This runs a matplotlib-based animation showing only population graphs.
+Run the tests with `cargo test`.
 
-## 🎮 Usage Guide
+## Project layout
 
-### Getting Started
-1. Launch the simulation: `python simulation_gui.py`
-2. Observe the ecosystem dynamics in real-time
-3. Watch as populations rise and fall based on predator-prey relationships
-
-### Controls
-- **Pause/Play**: Freeze the simulation to examine details
-- **Speed**: Slow down to watch behaviors or speed up for long-term trends
-- **Add Entities**: Boost populations to test ecosystem responses
-
-### Interesting Things to Try
-
-1. **Predator Removal**: Add many plants and herbivores, remove predators
-   - Watch herbivore population explode then crash from starvation
-
-2. **Apex Predator Introduction**: Add wolves to a stable fox-rabbit ecosystem
-   - Observe how wolves outcompete foxes
-
-3. **Resource Scarcity**: Remove plants and watch the cascade effect
-   - Herbivores starve → Predators starve
-
-4. **Genetic Drift**: Run for 1000+ steps and observe trait evolution
-   - Faster prey survive better → faster predators needed
-
-## 🏗️ Architecture
-
-### File Structure
 ```
-PredatorPreySimulator/
-├── entities.py          # Entity classes (Plant, Animal, species)
-├── ecosystem.py         # Ecosystem manager and simulation logic
-├── simulation_gui.py    # Main GUI application
-├── graphing.py          # Standalone graphing utilities
-└── README.md           # This file
+sim/   ecosim: the simulation as a pure library (depends only on glam)
+app/   predator-prey: the macroquad front end (rendering, HUD, input)
+web/   HTML shell and the miniquad JS loader for the WebAssembly build
 ```
 
-### Class Hierarchy
-```
-Entity (base)
-├── Plant
-└── Animal
-    ├── Herbivore
-    │   ├── Rabbit
-    │   └── Deer
-    └── Carnivore
-        ├── Fox
-        └── Wolf
-```
+The simulation does not know it is being drawn. The front end reads the world state and a per-tick event list (births and deaths) and turns them into pixels.
 
-## 📊 Species Characteristics
+---
 
-| Species | Speed | Vision | Max Energy | Max Age | Diet | Litter Size |
-|---------|-------|--------|------------|---------|------|-------------|
-| 🌱 Plant | - | - | - | ∞ | Sunlight | 1 (spread) |
-| 🐰 Rabbit | 1.2 | 15 | 80 | 150 | Plants | 2-4 |
-| 🦌 Deer | 1.5 | 25 | 150 | 300 | Plants | 1 |
-| 🦊 Fox | 1.3 | 20 | 100 | 250 | Rabbits | 2-3 |
-| 🐺 Wolf | 1.4 | 30 | 180 | 350 | Deer, Rabbits | 2-4 |
-
-## 🔬 Simulation Parameters
-
-### Tunable Constants (in entities.py and ecosystem.py)
-
-**Energy Costs:**
-- Wandering: 0.05-0.08 per step
-- Moving to food: 0.15 per step
-- Fleeing: 0.3 per step
-- Hunting: 0.25 per step
-
-**Reproduction:**
-- Proximity required: 3.0 units
-- Female cooldown: 50 steps
-- Male cooldown: 30 steps
-- Minimum age varies by species
-- Minimum energy varies by species
-
-**Population Limits:**
-- Max plants: 800
-- Max animals (total): 500
-
-## 🎨 Visual Guide
-
-### Colors
-- **Plants**: Light green → Dark green (maturity)
-- **Rabbits**: Forest green (normal), Light green (fleeing)
-- **Deer**: Saddle brown (normal), Tan (fleeing)
-- **Foxes**: Dark orange (normal), Orange-red (hunting)
-- **Wolves**: Gray (normal), Dark red (hunting)
-
-### Shapes
-- **Plants**: Small circles (size = maturity)
-- **Herbivores**: Circles (size = species + genetics)
-- **Carnivores**: Triangles (size = species + genetics)
-
-## 🔍 Advanced Features
-
-### Genetic System
-Each animal has 4 genes (0.5x - 1.5x multipliers):
-- `speed`: Movement and chase/flee effectiveness
-- `vision_range`: Detection distance multiplier
-- `size`: Affects visual size and predator nutrition
-- `efficiency`: Reduces energy consumption
-
-### Behavior States
-Entities can be in different states (visible via color changes):
-- `WANDERING`: Random movement
-- `SEEKING_FOOD`: Moving toward food source
-- `FLEEING`: Escaping from predator
-- `HUNTING`: Chasing prey
-- `SEEKING_MATE`: Moving toward potential mate
-- `RESTING`: Stationary after eating
-
-## 🐛 Known Limitations
-
-1. No spatial optimization - may slow with 500+ entities
-2. Vision is circular (no obstacles/line-of-sight blocking)
-3. No herding/pack behavior (yet)
-4. No seasons or environmental variation (yet)
-
-## 🚀 Future Enhancements
-
-Potential additions:
-- Seasonal cycles affecting plant growth
-- Water sources as requirement
-- Pack hunting for wolves
-- Herding behavior for herbivores
-- Terrain types (forests, plains)
-- Disease/parasites
-- Migration patterns
-- Camouflage genetics
-- Parent-offspring bonding
-
-## 📝 License
-
-This project is open source and available for educational and research purposes.
-
-## 🤝 Contributing
-
-Feel free to fork, modify, and experiment! Interesting features to add:
-- More species (birds, fish, insects)
-- Environmental disasters
-- Human impact simulation
-- Climate change effects
-- Ecosystem balance scoring
-
-## 📚 Educational Value
-
-This simulation demonstrates:
-- **Ecology**: Food chains, population dynamics, carrying capacity
-- **Evolution**: Natural selection, genetic drift
-- **Systems Thinking**: Feedback loops, emergent behavior
-- **Game Theory**: Optimal foraging, survival strategies
-- **Computer Science**: OOP, AI behavior trees, simulation design
-
-Enjoy exploring the complex dynamics of predator-prey relationships! 🌍🦊🐰
+This is a rewrite of the original Python and Tkinter version, which is still in the git history at [`f3789c7`](https://github.com/theomilll/PredatorPreySimulator/tree/f3789c7).
