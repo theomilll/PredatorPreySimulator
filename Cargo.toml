@@ -1,0 +1,19 @@
+[workspace]
+members = ["sim"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.88"
+repository = "https://github.com/theomilll/PredatorPreySimulator"
+
+[workspace.dependencies]
+glam = "0.27"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev.package."*"]
+opt-level = 2

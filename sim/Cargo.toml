@@ -1,0 +1,10 @@
+[package]
+name = "ecosim"
+version = "0.1.0"
+description = "Deterministic predator-prey ecosystem simulation with heritable traits"
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+glam.workspace = true
